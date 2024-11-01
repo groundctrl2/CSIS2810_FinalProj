@@ -23,9 +23,10 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #define DOWN_BUTTON 3
 
 // Ball and Paddle (CPU & Player) values
-const unsigned long BALL_RATE = 16;
-const unsigned long PADDLE_RATE = 33;
-const uint8_t PADDLE_HEIGHT = 24;
+unsigned long ball_rate = 16;
+unsigned long paddle_rate = 33;
+uint8_t paddle_height = 24;
+uint8_t half_paddle;
 
 // Ball position and direction variables
 uint8_t ball_x = 64, ball_y = 32;
@@ -49,9 +50,9 @@ void setup() {
   // Display setup
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C); // Initialize display
   display.clearDisplay();  // Clear Adafruit logo
+  display.setTextColor(WHITE);
 
   // Set title screen
-  display.setTextColor(WHITE);
   display.setCursor(15, 0); // Move cursor for 1st line
   display.setTextSize(2);
   display.print("CSIS2810");
@@ -64,6 +65,8 @@ void setup() {
   delay(2000); // 2s
   display.clearDisplay();
   drawCourt();
+  
+  half_paddle = paddle_height >> 1; // Bitwise shift right the paddle value to get half
   
   // Start time
   unsigned long start = millis();
@@ -81,83 +84,74 @@ void loop() {
   up_state |= (digitalRead(UP_BUTTON) == LOW);
   down_state |= (digitalRead(DOWN_BUTTON) == LOW);
 
+  // Update ball
   if(time > ball_update) {
-      uint8_t new_x = ball_x + ball_dir_x;
-      uint8_t new_y = ball_y + ball_dir_y;
+      ball_update += ball_rate; // Update ball check time
+      uint8_t new_x = ball_x + ball_dir_x; // Add ball direction to new x value
+      uint8_t new_y = ball_y + ball_dir_y; // Add ball direction to new y value
 
-      // Check if we hit the vertical walls
+      // If the ball hits a vertical wall
       if(new_x == 0 || new_x == 127) {
-          ball_dir_x = -ball_dir_x;
-          new_x += ball_dir_x + ball_dir_x;
+          ball_dir_x = -ball_dir_x; // Invert the x direction
+          new_x += 2 * ball_dir_x; // Send ball in the opposite direction
       }
 
-      // Check if we hit the horizontal walls.
+      // If the ball hits a horizontal wall
       if(new_y == 0 || new_y == 63) {
-          ball_dir_y = -ball_dir_y;
-          new_y += ball_dir_y + ball_dir_y;
+          ball_dir_y = -ball_dir_y; // Invert the y direction
+          new_y += 2 * ball_dir_y; // Send ball in the opposite direction
       }
 
-      // Check if we hit the CPU paddle
-      if(new_x == CPU_X && new_y >= cpu_y && new_y <= cpu_y + PADDLE_HEIGHT) {
-          ball_dir_x = -ball_dir_x;
-          new_x += ball_dir_x + ball_dir_x;
+      // If the ball hits the CPU's paddle
+      if(new_x == CPU_X && new_y >= cpu_y && new_y <= cpu_y + paddle_height) {
+          ball_dir_x = -ball_dir_x; // Invert the x direction
+          new_x += ball_dir_x + ball_dir_x; // Send ball in the opposite direction
       }
 
-      // Check if we hit the player paddle
-      if(new_x == PLAYER_X
-          && new_y >= player_y
-          && new_y <= player_y + PADDLE_HEIGHT)
-      {
-          ball_dir_x = -ball_dir_x;
-          new_x += ball_dir_x + ball_dir_x;
+      // If the ball hits the player's paddle
+      if(new_x == PLAYER_X && new_y >= player_y && new_y <= player_y + paddle_height) {
+          ball_dir_x = -ball_dir_x; // Invert the x direction
+          new_x += ball_dir_x + ball_dir_x; // Send ball in the opposite direction
       }
 
-      display.drawPixel(ball_x, ball_y, BLACK);
-      display.drawPixel(new_x, new_y, WHITE);
-      ball_x = new_x;
-      ball_y = new_y;
+      display.drawPixel(ball_x, ball_y, BLACK); // Erase ball from previous position
+      display.drawPixel(new_x, new_y, WHITE); // Draw ball in new position
+      ball_x = new_x; // Update ball x value
+      ball_y = new_y; // Update ball y value
 
-      ball_update += BALL_RATE;
-
-      has_changed = true;
+      has_changed = true; // Record that change has happened
   }
 
+  // Update paddles
   if(time > paddle_update) {
-      paddle_update += PADDLE_RATE;
+      paddle_update += paddle_rate;  // Update paddle check time
 
-      // CPU paddle
-      display.drawFastVLine(CPU_X, cpu_y, PADDLE_HEIGHT, BLACK);
-      const uint8_t half_paddle = PADDLE_HEIGHT >> 1;
-      if(cpu_y + half_paddle > ball_y) {
-          cpu_y -= 1;
-      }
-      if(cpu_y + half_paddle < ball_y) {
-          cpu_y += 1;
-      }
-      if(cpu_y < 1) cpu_y = 1;
-      if(cpu_y + PADDLE_HEIGHT > 63) cpu_y = 63 - PADDLE_HEIGHT;
-      display.drawFastVLine(CPU_X, cpu_y, PADDLE_HEIGHT, WHITE);
+      // Update CPU paddle
+      display.drawFastVLine(CPU_X, cpu_y, paddle_height, BLACK); // Erase paddle from previous position
+      cpu_y += (cpu_y + half_paddle > ball_y) ? -1 : 0; // If needed, subtract 1 from CPU y value to match ball's y value
+      cpu_y += (cpu_y + half_paddle < ball_y) ? 1 : 0; // If needed, add 1 to CPU y value to match ball's y value
+      if(cpu_y < 1) cpu_y = 1; // Ensure CPU's y value doesn't exceed top boundary
+      if(cpu_y + paddle_height > 63) cpu_y = 63 - paddle_height; // Ensure CPU's y value doesn't exceed bottom boundary
+      display.drawFastVLine(CPU_X, cpu_y, paddle_height, WHITE); // Draw CPU's paddle in new position
 
-      // Player paddle
-      display.drawFastVLine(PLAYER_X, player_y, PADDLE_HEIGHT, BLACK);
-      if(up_state) {
-          player_y -= 1;
-      }
-      if(down_state) {
-          player_y += 1;
-      }
-      up_state = down_state = false;
-      if(player_y < 1) player_y = 1;
-      if(player_y + PADDLE_HEIGHT > 63) player_y = 63 - PADDLE_HEIGHT;
-      display.drawFastVLine(PLAYER_X, player_y, PADDLE_HEIGHT, WHITE);
+      // Update player paddle
+      display.drawFastVLine(PLAYER_X, player_y, paddle_height, BLACK); // Erase paddle from previous position
+      player_y += (up_state) ? -1 : 0; // If up button pushed, subtract 1 from player's y value
+      player_y += (down_state) ? 1 : 0; // If down button pushed, add 1 to player's y value
+      up_state = down_state = false; // Set both button values back to false
+      if(player_y < 1) player_y = 1; // Ensure player's y value doesn't exceed top boundary
+      if(player_y + paddle_height > 63) player_y = 63 - paddle_height; // Ensure player's y value doesn't exceed bottom boundary
+      display.drawFastVLine(PLAYER_X, player_y, paddle_height, WHITE); // Draw player's paddle in new position
 
-      has_changed = true;
+      has_changed = true; // Record that change has happened
   }
 
+  // Update screen with changes
   if(has_changed)
       display.display();
 }
 
+// Draw the court's border
 void drawCourt() {
     display.drawRect(0, 0, 128, 64, WHITE);
 }
