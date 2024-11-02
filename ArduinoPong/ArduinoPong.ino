@@ -25,7 +25,7 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 // Ball and Paddle (CPU & Player) values
 unsigned long ball_rate = 16;
 unsigned long paddle_rate = 33;
-uint8_t paddle_height = 24;
+uint8_t paddle_height = 16;
 uint8_t half_paddle;
 
 // Ball position and direction variables
@@ -97,7 +97,7 @@ void loop() {
       }
 
       // If the ball hits a horizontal wall
-      if(new_y == 0 || new_y == 63) {
+      if(new_y == 17 || new_y == 63) {
           ball_dir_y = -ball_dir_y; // Invert the y direction
           new_y += 2 * ball_dir_y; // Send ball in the opposite direction
       }
@@ -118,7 +118,6 @@ void loop() {
       display.drawPixel(new_x, new_y, WHITE); // Draw ball in new position
       ball_x = new_x; // Update ball x value
       ball_y = new_y; // Update ball y value
-
       has_changed = true; // Record that change has happened
   }
 
@@ -130,7 +129,7 @@ void loop() {
       display.drawFastVLine(CPU_X, cpu_y, paddle_height, BLACK); // Erase paddle from previous position
       cpu_y += (cpu_y + half_paddle > ball_y) ? -1 : 0; // If needed, subtract 1 from CPU y value to match ball's y value
       cpu_y += (cpu_y + half_paddle < ball_y) ? 1 : 0; // If needed, add 1 to CPU y value to match ball's y value
-      if(cpu_y < 1) cpu_y = 1; // Ensure CPU's y value doesn't exceed top boundary
+      if(cpu_y < 17) cpu_y = 17; // Ensure CPU's y value doesn't exceed top boundary
       if(cpu_y + paddle_height > 63) cpu_y = 63 - paddle_height; // Ensure CPU's y value doesn't exceed bottom boundary
       display.drawFastVLine(CPU_X, cpu_y, paddle_height, WHITE); // Draw CPU's paddle in new position
 
@@ -139,7 +138,7 @@ void loop() {
       player_y += (up_state) ? -1 : 0; // If up button pushed, subtract 1 from player's y value
       player_y += (down_state) ? 1 : 0; // If down button pushed, add 1 to player's y value
       up_state = down_state = false; // Set both button values back to false
-      if(player_y < 1) player_y = 1; // Ensure player's y value doesn't exceed top boundary
+      if(player_y < 17) player_y = 17; // Ensure player's y value doesn't exceed top boundary
       if(player_y + paddle_height > 63) player_y = 63 - paddle_height; // Ensure player's y value doesn't exceed bottom boundary
       display.drawFastVLine(PLAYER_X, player_y, paddle_height, WHITE); // Draw player's paddle in new position
 
@@ -153,5 +152,5 @@ void loop() {
 
 // Draw the court's border
 void drawCourt() {
-    display.drawRect(0, 0, 128, 64, WHITE);
+    display.drawRect(0, 16, 128, 48, WHITE);
 }
