@@ -23,9 +23,9 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #define DOWN_BUTTON 3
 
 // Ball and Paddle (CPU & Player) values
-unsigned long ball_rate = 16;
-unsigned long paddle_rate = 33;
-uint8_t paddle_height = 16;
+const unsigned long ball_rate = 16;
+const unsigned long paddle_rate = 33;
+const uint8_t paddle_height = 16;
 uint8_t half_paddle;
 
 // Ball position and direction variables
@@ -41,6 +41,8 @@ unsigned long ball_update;
 unsigned long paddle_update;
 
 void setup() {
+  Serial.begin(9600); // Serial communication for debugging
+
   // Input button setup
   pinMode(UP_BUTTON, INPUT);
   pinMode(DOWN_BUTTON, INPUT);
@@ -118,6 +120,7 @@ void loop() {
       display.drawPixel(new_x, new_y, WHITE); // Draw ball in new position
       ball_x = new_x; // Update ball x value
       ball_y = new_y; // Update ball y value
+      
       has_changed = true; // Record that change has happened
   }
 
