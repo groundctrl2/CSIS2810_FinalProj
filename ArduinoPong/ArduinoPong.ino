@@ -34,7 +34,7 @@ uint8_t ball_dir_x = 1, ball_dir_y = 1;
 
 // Player position variables
 const uint8_t CPU_X = 12, PLAYER_X = 115;
-uint8_t cpu_y = 16, player_y = 16;
+uint8_t cpu_y = 30, player_y = 30;
 
 // Time tracking variables
 unsigned long ball_update;
