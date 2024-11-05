@@ -33,12 +33,15 @@ uint8_t ball_x = 64, ball_y = 32;
 uint8_t ball_dir_x = 1, ball_dir_y = 1;
 
 // Player position variables
-const uint8_t CPU_X = 12, PLAYER_X = 115; // Constants, values don't change
+const uint8_t CPU_X = 12, PLAYER_X = 115;
 uint8_t cpu_y = 16, player_y = 16;
 
 // Time tracking variables
 unsigned long ball_update;
 unsigned long paddle_update;
+
+// Score variables
+uint16_t score = 0; // unsigned integer, max score of 65,535
 
 void setup() {
   Serial.begin(9600); // Serial communication for debugging
@@ -55,18 +58,23 @@ void setup() {
   display.setTextColor(WHITE);
 
   // Set title screen
-  display.setCursor(15, 0); // Move cursor for 1st line
-  display.setTextSize(2);
-  display.print("CSIS2810");
   display.setCursor(17, 25); // Move cursor for 2nd line
   display.setTextSize(4);
   display.print("PONG");
+  display.setCursor(15, 0); // Move cursor for 1st line (done 2nd for score banner use)
+  display.setTextSize(2);
+  display.print("CSIS2810");
 
   // Display title screen briefly
   display.display();
   delay(2000); // 2s
   display.clearDisplay();
+
+  // Display court and score banner (score value in loop)
   drawCourt();
+  display.setTextSize(1);
+  display.setCursor(0, 0);
+  display.print("Score:");
   
   half_paddle = paddle_height >> 1; // Bitwise shift right the paddle value to get half
   
@@ -81,6 +89,11 @@ void loop() {
   bool has_changed = false; // Tracks whether a change has occured in current loop (paddle/ball movement)
   static bool up_state = false; // UP button value
   static bool down_state = false; // DOWN button value
+
+  // Erase the current score banner value
+  display.setCursor(38, 0);
+  display.setTextColor(BLACK);
+  display.print(score);
   
   // Set buttons true if currently true OR now true
   up_state |= (digitalRead(UP_BUTTON) == LOW);
@@ -114,8 +127,10 @@ void loop() {
       if(new_x == PLAYER_X && new_y >= player_y && new_y <= player_y + paddle_height) {
           ball_dir_x = -ball_dir_x; // Invert the x direction
           new_x += ball_dir_x + ball_dir_x; // Send ball in the opposite direction
+          score++; // Add 1 to score
       }
 
+      score = (new_x > PLAYER_X) ? 0 : score; // Reset score if ball missed
       display.drawPixel(ball_x, ball_y, BLACK); // Erase ball from previous position
       display.drawPixel(new_x, new_y, WHITE); // Draw ball in new position
       ball_x = new_x; // Update ball x value
@@ -130,7 +145,7 @@ void loop() {
 
       // Update CPU paddle
       display.drawFastVLine(CPU_X, cpu_y, paddle_height, BLACK); // Erase paddle from previous position
-      cpu_y += (cpu_y + half_paddle > ball_y) ? -1 : 0; // If needed, subtract 1 from CPU y value to match ball's y value
+      cpu_y -= (cpu_y + half_paddle > ball_y) ? 1 : 0; // If needed, subtract 1 from CPU y value to match ball's y value
       cpu_y += (cpu_y + half_paddle < ball_y) ? 1 : 0; // If needed, add 1 to CPU y value to match ball's y value
       if(cpu_y < 17) cpu_y = 17; // Ensure CPU's y value doesn't exceed top boundary
       if(cpu_y + paddle_height > 63) cpu_y = 63 - paddle_height; // Ensure CPU's y value doesn't exceed bottom boundary
@@ -138,7 +153,7 @@ void loop() {
 
       // Update player paddle
       display.drawFastVLine(PLAYER_X, player_y, paddle_height, BLACK); // Erase paddle from previous position
-      player_y += (up_state) ? -1 : 0; // If up button pushed, subtract 1 from player's y value
+      player_y -= (up_state) ? 1 : 0; // If up button pushed, subtract 1 from player's y value
       player_y += (down_state) ? 1 : 0; // If down button pushed, add 1 to player's y value
       up_state = down_state = false; // Set both button values back to false
       if(player_y < 17) player_y = 17; // Ensure player's y value doesn't exceed top boundary
@@ -147,6 +162,11 @@ void loop() {
 
       has_changed = true; // Record that change has happened
   }
+
+  // Erase the current score banner value
+  display.setCursor(38, 0);
+  display.setTextColor(WHITE);
+  display.print(score);
 
   // Update screen with changes
   if(has_changed)
