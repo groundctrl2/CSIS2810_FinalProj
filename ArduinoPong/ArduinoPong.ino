@@ -43,6 +43,7 @@ unsigned long paddle_update;
 
 // Score variables
 uint16_t score = 0; // unsigned integer, max score of 65,535
+bool paddleShrunk = false;
 
 void setup() {
   Serial.begin(9600); // Serial communication for debugging
@@ -96,10 +97,11 @@ void loop() {
   display.setTextColor(BLACK);
   display.print(score);
 
-  // Shrinks Players Paddle if score is a multiple of 4
-  if(score % 4 == 0 && paddle_height_Player >= 6 && score != 0) {
-    score++; // had to add one to the score here so that it doesnt decrease the size to fast
-    // To not have phantom pixels
+  // Shrinks Player's paddle if score is a multiple of 4
+  if(score % 4 == 0 && paddle_height_Player >= 6 && score != 0 && !paddleShrunk) {
+    paddleShrunk = true; // Prevent invalid paddle shrinking
+
+    // Redraw paddle to not have phantom pixels
     paddle_height_Player--;
     display.drawFastVLine(PLAYER_X, player_y, paddle_height_Player + 1, BLACK); // Erase paddle from previous position
     display.drawFastVLine(PLAYER_X, player_y, paddle_height_Player, WHITE); // Draw player's paddle in new position
@@ -142,6 +144,7 @@ void loop() {
           ball_dir_x = -ball_dir_x; // Invert the x direction
           new_x += ball_dir_x + ball_dir_x; // Send ball in the opposite direction
           score++; // Add 1 to score
+          paddleShrunk = false;
       }
 
       score = (new_x > PLAYER_X) ? 0 : score; // Reset score if ball missed
